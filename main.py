@@ -10,23 +10,15 @@ from umqttsimple import MQTTClient
 import ubinascii
 import machine
 import micropython
-import network
 import esp
 esp.osdebug(None)
 import gc
 gc.collect()
 from payload import device_payload
 import json
+from WIFI_CONFIG import MQTT_SERVER, MQTT_USER, MQTT_PASS
 
 
-ssid = 'FARLEIGH-MESH'
-password = 'Julie1801!'
-mqtt_server = '192.168.68.51'
-mqtt_user = 'beantree'
-mqtt_pass = 's2sfilwY'
-
-#EXAMPLE IP ADDRESS
-#mqtt_server = '192.168.1.144'
 client_id = ubinascii.hexlify(machine.unique_id())
 uid_str = ubinascii.hexlify(machine.unique_id()).decode()
 
@@ -49,17 +41,6 @@ topic_sub = b'heater/#'
 last_message = 0
 message_interval = 5
 counter = 0
-
-station = network.WLAN(network.STA_IF)
-
-station.active(True)
-station.connect(ssid, password)
-
-while station.isconnected() == False:
-  pass
-
-print('Connected to:', ssid)
-print(station.ifconfig())
 
 device_topic = "homeassistant/device/" + uid_str + "/config"
 
@@ -84,12 +65,12 @@ def sub_cb(topic, msg):
 
         
 def connect_and_subscribe():
-  global client_id, mqtt_server, topic_sub
-  client = MQTTClient(client_id, mqtt_server, user=mqtt_user, password=mqtt_pass)
+  global client_id, MQTT_SERVER, topic_sub
+  client = MQTTClient(client_id, MQTT_SERVER, user=MQTT_USER, password=MQTT_PASS)
   client.set_callback(sub_cb)
   client.connect()
   client.subscribe(topic_sub)
-  print('Connected to %s MQTT broker, subscribed to %s topic' % (mqtt_server, topic_sub))
+  print('Connected to %s MQTT broker, subscribed to %s topic' % (MQTT_SERVER, topic_sub))
   return client
 
 def restart_and_reconnect():
