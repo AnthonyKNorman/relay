@@ -15,13 +15,13 @@ from WIFI_CONFIG import MQTT_SERVER, MQTT_USER, MQTT_PASS
 client_id = ubinascii.hexlify(machine.unique_id())
 uid_str = ubinascii.hexlify(machine.unique_id()).decode()
 
-device_payload["dev"]["name"] = "Chamber Heater " + uid_str
-device_payload["o"]["name"] = "Chamber Heater " + uid_str
+device_payload["dev"]["name"] = "Relay " + uid_str
+device_payload["o"]["name"] = "Relay " + uid_str
 device_payload["dev"]["ids"] = uid_str
 
 device_payload["cmps"]["switch1"]["unique_id"] = uid_str + "aa"
-cmd_topic = "heater/" + uid_str + "/switch/cmd"
-state_topic = "heater/" + uid_str + "/switch/state"
+cmd_topic = "relay/" + uid_str + "/switch/cmd"
+state_topic = "relay/" + uid_str + "/switch/state"
 device_payload["cmps"]["switch1"]["state_topic"] = state_topic
 device_payload["cmps"]["switch1"]["command_topic"] = cmd_topic
 
@@ -29,7 +29,7 @@ device_payload_dump = json.dumps(device_payload)
 
 print(device_payload_dump)
 
-topic_sub = b'heater/#'
+topic_sub = b'relay/#'
 
 last_message = 0
 message_interval = 5
@@ -43,18 +43,18 @@ device_topic = "homeassistant/device/" + uid_str + "/config"
     
 def sub_cb(topic, msg):
   print((topic, msg))
-  global heater_cmd
+  global relay_cmd
   
-  # heater on / off message
+  # relay on / off message
   byte_cmd_topic = bytearray()
   byte_cmd_topic.extend(cmd_topic)
   
   if topic == byte_cmd_topic:
-    print('heater on/off message received')
+    print('relay on/off message received')
     if msg == b'ON':
-      heater_cmd = 'ON'
+      relay_cmd = 'ON'
     else:
-      heater_cmd = 'OFF'
+      relay_cmd = 'OFF'
 
         
 def connect_and_subscribe():
@@ -71,20 +71,18 @@ def restart_and_reconnect():
   time.sleep(10)
   machine.reset()
     
-def update_heater_state():
-    print("heater cmd", heater_cmd)
-    if heater_cmd == 'ON':
-      heater.on()
-      fan.on()
+def update_relay_state():
+    print("relay cmd", relay_cmd)
+    if relay_cmd == 'ON':
+      relay.on()
       led.off()
       msg = 'ON'
     else:
-      heater.off()
-      fan.off()
+      relay.off()
       led.on()
       msg = 'OFF'
       
-    print("about to publish heater state")
+    print("about to publish relay state")
     byte_state_topic = bytearray()
     byte_state_topic.extend(state_topic)
 
@@ -102,16 +100,14 @@ except OSError as e:
   
 client.publish(device_topic, device_payload_dump)
 
-heater = machine.Pin(4, machine.Pin.OUT)
-fan = machine.Pin(9, machine.Pin.OUT)
+relay = machine.Pin(4, machine.Pin.OUT)
 led = machine.Pin(8, machine.Pin.OUT)
-heater.off()
-fan.off()
+relay.off()
 led.off()
 
-# set the two flags different to force heater off to start
-heater_cmd = 'OFF'
-last_heater_cmd = 'ON'
+# set the two flags different to force relay off to start
+relay_cmd = 'OFF'
+last_relay_cmd = 'ON'
 
 #**************************************
 #    Loop
@@ -129,8 +125,8 @@ while True:
     print("OS error:", e)
     restart_and_reconnect()
 
-  if heater_cmd != last_heater_cmd:
-      print("heater command", heater_cmd)
-      last_heater_cmd = heater_cmd
-      update_heater_state()
+  if relay_cmd != last_relay_cmd:
+      print("relay command", relay_cmd)
+      last_relay_cmd = relay_cmd
+      update_relay_state()
 

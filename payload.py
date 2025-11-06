@@ -10,7 +10,7 @@ device_payload = {
     "switch1": {
       "p": "switch",
       "unique_id": "",
-      "name":"Heater",
+      "name":"Relay",
       "command_topic": "",
       "state_topic": "",
       "payload_on": "ON",
