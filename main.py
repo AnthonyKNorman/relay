@@ -29,10 +29,10 @@ device_payload_dump = json.dumps(device_payload)
 
 print(device_payload_dump)
 
-topic_sub = b'relay/#'
+topic_sub = b'relay/' + uid_str + '/#'
 
 last_message = 0
-message_interval = 5
+message_interval = 300
 counter = 0
 
 device_topic = "homeassistant/device/" + uid_str + "/config"
@@ -103,6 +103,11 @@ client.publish(device_topic, device_payload_dump)
 relay = machine.Pin(4, machine.Pin.OUT)
 led = machine.Pin(8, machine.Pin.OUT)
 relay.off()
+
+for i in range (10):
+    led.value(not led.value())
+    time.sleep_ms(500)
+
 led.off()
 
 # set the two flags different to force relay off to start
@@ -118,6 +123,7 @@ while True:
     client.check_msg()
     
     if (time.time() - last_message) > message_interval:
+      client.publish(device_topic, device_payload_dump)
 
       last_message = time.time()
       counter += 1
