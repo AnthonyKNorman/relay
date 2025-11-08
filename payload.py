@@ -32,6 +32,19 @@ device_payload = {
       "device_class": "power",
       "state_topic": ""
     },
-
+    "ssid": {
+      "p": "text",
+      "unique_id": "",
+      "name":"WiFi SSID",
+      "device_class": "power",
+      "state_topic": ""
+    },
+    "reset": {
+      "p": "button",
+      "unique_id": "",
+      "name":"Reset",
+      "command_topic": "",
+      "payload_press": "RESET"
+    }
   }
 }

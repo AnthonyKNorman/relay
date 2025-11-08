@@ -1,9 +1,9 @@
 import time
 from umqttsimple import MQTTClient
 import ubinascii
-import machine
+import machine, neopixel
 import micropython
-import os
+import uos
 import esp
 esp.osdebug(None)
 import gc
@@ -13,6 +13,17 @@ import json
 from WIFI_CONFIG import MQTT_SERVER, MQTT_USER, MQTT_PASS
 
 device_name = "relay"
+
+print(uos.uname())
+machine_name = uos.uname().machine
+if 'C3' in machine_name:
+    machine_id = 'C3'
+elif 'S3' in machine_name:
+    machine_id = 'S3'
+else:
+    machine_id = 'unknown'
+    
+print('Machine ID:', machine_id)    
 
 client_id = ubinascii.hexlify(machine.unique_id())
 uid_str = ubinascii.hexlify(machine.unique_id()).decode()
@@ -126,6 +137,44 @@ def update_relay_state():
     client.publish(state_topic('switch1'), msg)
     
 #**************************************
+#   LED Management
+#**************************************    
+def led_init():
+    global machine_id
+    global n
+    global p
+    global np
+    
+    # simple led on GPIO4
+    if machine_id == 'C3':
+        led = machine.Pin(8, machine.Pin.OUT)
+    # neopixel on GPIO48
+    elif machine_id == 'S3':
+        n = 1
+        p = 8
+        np = neopixel.Neopixel(machine.Pin(p), n)
+        
+def led_off():
+    global machine_id
+    global np
+    if machine_id == 'C3':
+        led.value(1)
+    elif machine_id == 'S3':
+        np[0] = (255,0,0)	#red
+        np.write()
+
+def led_on():
+    global machine_id
+    global np
+    if machine_id == 'C3':
+        led.value(0)
+    elif machine_id == 'S3':
+        np[0] = (0,255,0)	#red
+        np.write()
+    
+        
+    
+#**************************************
 #    Setup
 #**************************************
 
@@ -141,18 +190,21 @@ led = machine.Pin(8, machine.Pin.OUT)
 relay.off()
 
 for i in range (10):
-    led.value(not led.value())
+    led_on()
+    time.sleep_ms(500)
+    led_off()
     time.sleep_ms(500)
 
-led.off()
 
 # Send the latest software version
 # get the current version (stored in version.json)
-if 'version.json' in os.listdir():    
+if 'version.json' in uos.listdir():    
     with open('version.json') as f:
         current_version = int(json.load(f)['version'])
     print(f"Current device firmware version is '{current_version}'")
     client.publish(state_topic('version'), str(current_version))
+    
+client.publish(state_topic('ssid'), SSID)
     
 # set the two flags different to force relay off to start
 relay_cmd = 'OFF'
@@ -174,6 +226,9 @@ while True:
       print('sending wifi strength')
       strength = wlan.status('rssi')
       client.publish(state_topic('strength'), str(strength))
+      
+      client.publish(state_topic('ssid'), SSID)
+
 
       last_message = time.time()
       counter += 1
@@ -186,3 +241,4 @@ while True:
       last_relay_cmd = relay_cmd
       update_relay_state()
       
+
