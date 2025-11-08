@@ -3,6 +3,7 @@ from umqttsimple import MQTTClient
 import ubinascii
 import machine
 import micropython
+import os
 import esp
 esp.osdebug(None)
 import gc
@@ -11,25 +12,46 @@ from payload import device_payload
 import json
 from WIFI_CONFIG import MQTT_SERVER, MQTT_USER, MQTT_PASS
 
+device_name = "relay"
 
 client_id = ubinascii.hexlify(machine.unique_id())
 uid_str = ubinascii.hexlify(machine.unique_id()).decode()
 
-device_payload["dev"]["name"] = "Relay " + uid_str
-device_payload["o"]["name"] = "Relay " + uid_str
+print('-----------------------------------')
+device_payload["dev"]["name"] = device_name + '(' + uid_str + ')'
+device_payload["o"]["name"] = device_name + '(' + uid_str + ')'
 device_payload["dev"]["ids"] = uid_str
 
-device_payload["cmps"]["switch1"]["unique_id"] = uid_str + "aa"
-cmd_topic = "relay/" + uid_str + "/switch/cmd"
-state_topic = "relay/" + uid_str + "/switch/state"
-device_payload["cmps"]["switch1"]["state_topic"] = state_topic
-device_payload["cmps"]["switch1"]["command_topic"] = cmd_topic
+entity_count = 0
+
+for entity in device_payload["cmps"]:
+    entity_name = device_payload["cmps"][entity]["name"].replace(" ", "_").lower()
+    try:
+        device_payload["cmps"][entity]["state_topic"] = device_name + '/' + uid_str + '/' + entity_name + '/state'
+    except:
+        print('no state topic')
+        
+    try:    
+        device_payload["cmps"][entity]["command_topic"] = device_name + '/' + uid_str + '/' + entity_name + '/cmd'
+    except:
+        print('no command topic')
+        
+    device_payload["cmps"][entity]["unique_id"] = uid_str + str(entity_count)
+    print (device_payload["cmps"][entity])
+    
+    entity_count += 1
+        
+print('-----------------------------------')
+
 
 device_payload_dump = json.dumps(device_payload)
-
+print('this is the payload')
 print(device_payload_dump)
+topic_sub_string = device_name + '/' + uid_str + '/#'
+topic_sub = bytearray()
+topic_sub.extend(topic_sub_string)
+print('topic_sub ',topic_sub)
 
-topic_sub = b'relay/' + uid_str + '/#'
 
 last_message = 0
 message_interval = 300
@@ -38,30 +60,45 @@ counter = 0
 device_topic = "homeassistant/device/" + uid_str + "/config"
 
 #**************************************
+#    Return Topics as string
+#    takes: entity as string
+#    returns: topic as string
+#**************************************
+
+def state_topic(entity):
+    return device_payload["cmps"][entity]["state_topic"]
+
+
+def cmd_topic(entity):
+    return device_payload["cmps"][entity]["command_topic"]
+
+#**************************************
 #    Handle incoming messages
-#*************************************
-    
+#**************************************
+
 def sub_cb(topic, msg):
-  print((topic, msg))
+  print('received: ',topic, msg)
   global relay_cmd
-  
+  str_topic = topic.decode('utf-8')
   # relay on / off message
-  byte_cmd_topic = bytearray()
-  byte_cmd_topic.extend(cmd_topic)
-  
-  if topic == byte_cmd_topic:
+  if str_topic == cmd_topic('switch1'):
     print('relay on/off message received')
     if msg == b'ON':
       relay_cmd = 'ON'
     else:
       relay_cmd = 'OFF'
 
+#**************************************
+#   MQTT
+#**************************************
         
 def connect_and_subscribe():
   global client_id, MQTT_SERVER, topic_sub
   client = MQTTClient(client_id, MQTT_SERVER, user=MQTT_USER, password=MQTT_PASS)
   client.set_callback(sub_cb)
   client.connect()
+  
+  
   client.subscribe(topic_sub)
   print('Connected to %s MQTT broker, subscribed to %s topic' % (MQTT_SERVER, topic_sub))
   return client
@@ -70,7 +107,10 @@ def restart_and_reconnect():
   print('Failed to connect to MQTT broker. Reconnecting...')
   time.sleep(10)
   machine.reset()
-    
+
+#**************************************
+#   Manage relay based on received command
+#**************************************
 def update_relay_state():
     print("relay cmd", relay_cmd)
     if relay_cmd == 'ON':
@@ -83,15 +123,11 @@ def update_relay_state():
       msg = 'OFF'
       
     print("about to publish relay state")
-    byte_state_topic = bytearray()
-    byte_state_topic.extend(state_topic)
-
-    client.publish(byte_state_topic, msg)    
-
+    client.publish(state_topic('switch1'), msg)
     
 #**************************************
 #    Setup
-#**************************************    
+#**************************************
 
 try:
   client = connect_and_subscribe()
@@ -110,6 +146,14 @@ for i in range (10):
 
 led.off()
 
+# Send the latest software version
+# get the current version (stored in version.json)
+if 'version.json' in os.listdir():    
+    with open('version.json') as f:
+        current_version = int(json.load(f)['version'])
+    print(f"Current device firmware version is '{current_version}'")
+    client.publish(state_topic('version'), str(current_version))
+    
 # set the two flags different to force relay off to start
 relay_cmd = 'OFF'
 last_relay_cmd = 'ON'
@@ -123,7 +167,13 @@ while True:
     client.check_msg()
     
     if (time.time() - last_message) > message_interval:
+        
+      print('sending device info')
       client.publish(device_topic, device_payload_dump)
+      
+      print('sending wifi strength')
+      strength = wlan.status('rssi')
+      client.publish(state_topic('strength'), str(strength))
 
       last_message = time.time()
       counter += 1
@@ -135,4 +185,4 @@ while True:
       print("relay command", relay_cmd)
       last_relay_cmd = relay_cmd
       update_relay_state()
-
+      
