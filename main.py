@@ -126,11 +126,11 @@ def update_relay_state():
     print("relay cmd", relay_cmd)
     if relay_cmd == 'ON':
       relay.on()
-      led.off()
+      led_on()
       msg = 'ON'
     else:
       relay.off()
-      led.on()
+      led_off()
       msg = 'OFF'
       
     print("about to publish relay state")
@@ -139,21 +139,7 @@ def update_relay_state():
 #**************************************
 #   LED Management
 #**************************************    
-def led_init():
-    global machine_id
-    global n
-    global p
-    global np
-    
-    # simple led on GPIO4
-    if machine_id == 'C3':
-        led = machine.Pin(8, machine.Pin.OUT)
-    # neopixel on GPIO48
-    elif machine_id == 'S3':
-        n = 1
-        p = 8
-        np = neopixel.Neopixel(machine.Pin(p), n)
-        
+
 def led_off():
     global machine_id
     global np
@@ -186,8 +172,17 @@ except OSError as e:
 client.publish(device_topic, device_payload_dump)
 
 relay = machine.Pin(4, machine.Pin.OUT)
-led = machine.Pin(8, machine.Pin.OUT)
 relay.off()
+
+# simple led on GPIO4
+if machine_id == 'C3':
+    led = machine.Pin(8, machine.Pin.OUT)
+# neopixel on GPIO48
+elif machine_id == 'S3':
+    n = 1
+    p = 48
+    np = neopixel.NeoPixel(machine.Pin(p), n)
+
 
 for i in range (10):
     led_on()
@@ -241,4 +236,3 @@ while True:
       last_relay_cmd = relay_cmd
       update_relay_state()
       
-
