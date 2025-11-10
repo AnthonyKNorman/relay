@@ -54,7 +54,6 @@ for entity in device_payload["cmps"]:
         
 print('-----------------------------------')
 
-
 device_payload_dump = json.dumps(device_payload)
 print('this is the payload')
 print(device_payload_dump)
@@ -62,7 +61,6 @@ topic_sub_string = device_name + '/' + uid_str + '/#'
 topic_sub = bytearray()
 topic_sub.extend(topic_sub_string)
 print('topic_sub ',topic_sub)
-
 
 last_message = 0
 message_interval = 300
