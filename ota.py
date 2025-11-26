@@ -25,7 +25,10 @@ class OTAUpdater:
         # get the current version (stored in version.json)
         if 'version.json' in os.listdir():    
             with open('version.json') as f:
-                self.current_version = int(json.load(f)['version'])
+                self.version_data = json.load(f)
+                print(self.version_data)
+                # self.current_version = int(json.load(f)['version'])
+                self.current_version = int(self.version_data["version"])
             print(f"Current device firmware version is '{self.current_version}'")
 
         else:
@@ -33,6 +36,7 @@ class OTAUpdater:
             # save the current version
             with open('version.json', 'w') as f:
                 json.dump({'version': self.current_version}, f)
+            self.version_data = {}
             
     def connect_wifi(self):
         """ Connect to Wi-Fi."""
@@ -77,7 +81,7 @@ class OTAUpdater:
 
         # save the current version
         with open('version.json', 'w') as f:
-            json.dump({'version': self.current_version}, f)
+            json.dump(self.version_data, f)
         
         # free up some memory
         self.latest_code = None
@@ -109,16 +113,35 @@ class OTAUpdater:
         data = json.loads(response.text)
         
         print(f"data is: {data}, url is: {self.version_url}")
-        print(f"data version is: {data['version']}")
+        
+        newer_version_available = False
+        for file in data:
+            print(f"file is: {file} and version is: {data[file]}")
+            new_version = data[file]
+            if file in self.version_data:
+                current_version = self.version_data[file]
+            else:
+                current_version = 0
+                self.version_data[file] = 0
+                
+            if new_version > current_version:
+                print(f"{file} is version {new_version} and current version is {current_version}")
+                newer_version_available = True
+                self.version_data[file] = new_version
+                break
+        print('-- version data --')
+        print (self.version_data)
+            
+        # print(f"data version is: {data['version']}")
         # Turn list to dict using dictionary comprehension
 #         my_dict = {data[i]: data[i + 1] for i in range(0, len(data), 2)}
         
-        self.latest_version = int(data['version'])
+        self.latest_version = int(new_version)
         print(f'latest version is: {self.latest_version}')
         
         # addded by AKN
         # set the filename from the JSON file in the repository
-        self.filename = data['filename']
+        self.filename = file
         print(f'AKN - filename from JSON is: {self.filename}')
         # build the filename URL
         self.firmware_url = self.repo_url + 'main/' + self.filename
@@ -127,7 +150,7 @@ class OTAUpdater:
         #######################
         
         # compare versions
-        newer_version_available = True if self.current_version < self.latest_version else False
+        # newer_version_available = True if self.current_version < self.latest_version else False
         
         print(f'Newer version available: {newer_version_available}')    
         return newer_version_available
