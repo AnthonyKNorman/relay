@@ -1,5 +1,11 @@
 {
-  "version":2,
-  "filename":"main.py"
+	"files": {
+		"main.py": {
+			"version":1
+		},
+		"payload.py": {
+			"version":1
+		}
+	}
 }
 
