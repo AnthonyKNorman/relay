@@ -28,8 +28,8 @@ class OTAUpdater:
                 self.version_data = json.load(f)
                 print(self.version_data)
                 # self.current_version = int(json.load(f)['version'])
-                self.current_version = int(self.version_data["version"])
-            print(f"Current device firmware version is '{self.current_version}'")
+                # self.current_version = int(self.version_data["version"])
+            # print(f"Current device firmware version is '{self.current_version}'")
 
         else:
             self.current_version = 0
