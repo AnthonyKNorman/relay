@@ -193,9 +193,9 @@ for i in range (10):
 # get the current version (stored in version.json)
 if 'version.json' in uos.listdir():    
     with open('version.json') as f:
-        current_version = int(json.load(f)['version'])
+        current_version = f.read()
     print(f"Current device firmware version is '{current_version}'")
-    client.publish(state_topic('version'), str(current_version))
+    client.publish(state_topic('version'), current_version)
     
 client.publish(state_topic('ssid'), SSID)
     
@@ -234,3 +234,4 @@ while True:
       last_relay_cmd = relay_cmd
       update_relay_state()
       
+
