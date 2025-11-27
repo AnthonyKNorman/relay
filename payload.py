@@ -26,7 +26,7 @@ device_payload = {
       "state_topic": ""
     },
     "version": {
-      "p": "sensor",
+      "p": "text",
       "unique_id": "",
       "name":"OTA Version Number",
       "device_class": "power",
